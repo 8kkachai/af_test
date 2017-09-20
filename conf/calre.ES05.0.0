@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="tis-620" ?>
+<configuration>
+    <cold>
+        <HomeDirectory value="/opt/equinox" />
+        <sf group="calre" service="0" instance="0">
+            <Host host="localhost" port="21300" />
+        </sf>
+        <!--resultdata="none" is optional -->
+        <!--resultdata="text" force data to text/plain and put value in EquinoxRawdata::val-->
+        <!--resultdata="pcdata" force data to text/xml and put value in EquinoxRawdata::EquinoxRawdata_PCdata-->
+        <!-- ssl_mode=[SSLv2|SSLv3|SSLv23|TLSv1|TLSv1.1|TLSv1.2] -->
+        <!-- cert_file,key_file,rsa_key_file = [/path/to/.pem] -->
+        <!-- cipher_list=[ALL] -->
+        <httpd ip="0.0.0.0"  port="14001" backlog="256" authenhost="false" resultdata="none" ssl_mode="none" />
+	<!--af_correlation optional attribute:: service="fixservicename" .. (must -> library="default" ) -->
+        <correlation library="default" name="libcorrelate.so" function="extract_correlate"/>
+        <af_correlation library="default" name="lib_es05_af_correlate.so" function="af_extract_correlate"/>
+        <Body name="XML_version" value="1.0" display="none"/>
+        <Body name="XML_encoding" value="tis-620" display="none"/>
+        <Header name="XXX" value="YYY" />
+    </cold>
+    <warm>
+        <SFLOG value="FATAL|ERROR|WARN|INFO" />
+        <!-- SFLOGSplitInterval number of minute value : 5-1440 (1440 = 1 day) **value can modulo to 1440 only exp: 10,20,30,60,120 -->
+        <SFLOGSplitInterval value="1440" />
+        <!-- StatInterval value : 1,2,3,4,5,6,10,12,15,20,30,60 -->
+        <StatInterval value="10" />
+        <!-- StatAlignment for adjust number of second in minute value : 0-59 -->
+        <StatAlignment value="0" />
+        <!-- StatResetInterval number of minute value : 0-1440 (1440 = 1 day) -->
+        <StatResetInterval value="1440" />
+        <HousekeeperInterval value="10" />
+        <RestartDelay value="1" />
+
+        <EDBTimeToWait value="10" />
+
+        <SFMessageTimeout value="10" />
+        <SFMaxClient value="2" />
+        <SFConnectTimeout value="10" />
+        <SFReadTimeout value="10" />
+        <SFWriteTimeout value="10" />
+        <SFACKTimeout value="20" />
+        <SFWatchdogInterval value="30" />
+        <SFMaxWriteLength value="8372223" />
+        <SFHighMessageCount value="2000" />
+        <SFLowMessageCount value="1000" />
+
+        <HttpForcePlainText value="false" />
+        <HttpMaxSession value="256" />
+        <HttpReadTimeout value="10" />
+        <HttpWriteTimeout value="10" />
+        <HttpIdleTimeout value="60" />
+        <HttpMaxWriteLength value="0" />
+
+        <!--Wrap content by ERDHeader , ERDData : [yes:no]-->
+        <HttpHeader value="no" />
+        <!--Generate/Validate cookie by ES05 : [yes:no] , choose "no" if client use custom cookie.-->
+        <HttpEquinoxCookie value="yes" />
+        <!--Accept send body in the case method GET,DELETE-->
+        <AlwaysAcceptBody value="no"/>
+		<!--Encoding before request to App : [base64:no] (default = no) , encode base64 then HttpERDDataIncomingEncode [base64] and HttpHeader [yes] -->
+		<HttpERDDataIncomingEncode value="no" />
+        <!--Encoding(text/plain) before response to HTTP client : [encode:decode:no] (default = decode)-->
+        <OutgoingEncoding value="decode" />
+
+        <TPSLimit value="1000" />
+        <TPSWindow value="1" />
+    </warm>
+</configuration>

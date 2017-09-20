@@ -55,17 +55,31 @@
 #define MY_AF_RET_TIMEOUT     			EQX_RET_TIMEOUT
 
 #define MY_AF_EVENT_ANY					0
-#define MY_AF_EVENT_GET_NUMBER_CLIENT	1
-#define MY_AF_EVENT_GET_NUMBER_SERVER   2
-#define MY_AF_SEND_FINISH               10
+#define MY_AF_EVENT_GOT_REQUEST_CLIENT  1
+
+#define MY_AF_EVENT_GOT_MATH_SERVER     2
+#define MY_AF_EVENT_GOT_REQUEST_DBPROXY 3
+
+#define MY_AF_EVENT_GET_NUMBER_CLIENT	3
+#define MY_AF_EVENT_GET_NUMBER_SERVER   4
+#define MY_AF_EVENT_ERROR               5
+#define MY_AF_EVENT_ERROR_NOSUCH        6
+#define MY_AF_EVENT_REJECT              7
+#define MY_AF_EVENT_ABORT               8
+#define MY_AF_EVENT_TIMEOUT             9
+#define MY_AF_EVENT_FINISH               10
 #define MY_AF_EVENT_UNKNOWN				-1000
 
 #define MY_AF_SEND_NOTHING				0
-#define MY_AF_SEND_ANY					1
+#define MY_AF_SEND_ANY					100
 
 #define MY_AF_STATE_IDLE				0
-#define MY_AF_STATE_W_TIMEOUT			1
-#define MY_AF_STATE_W_PROXY				2
+#define MY_AF_STATE_W_PROXY				1
+
+#define MY_AF_MATH_PLUS					"+"
+#define MY_AF_MATH_MINUS				"-"
+#define MY_AF_MATH_MULTIPLY				"*"
+#define MY_AF_MATH_DIVIDE				"/"
 
 typedef struct _configuration_
 {
@@ -77,10 +91,14 @@ typedef struct _configuration_
 typedef struct _instance_
 {
 	char incoming_addr[EQX_RAWDATA_ORIG_SIZE];
-	int timestamp_sec;
-	int timestamp_usec;
+	char invoke[EQX_RAWDATA_INVOKE_SIZE];
+	int  number_from_client;
+	char math_symbol[1];
+	int  number_from_dbproxy;
 	
 	int command;
+	char output[100];
+	
 } AF_INSTANCE;
 
 int af_state_idle(int messageType, EC_UTILS* utils, EQX_MSG *emsg, AF_INSTANCE *instance, char* err);

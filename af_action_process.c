@@ -2,6 +2,7 @@
 
     MIMO Ltd
     AF Template
+    AF Template
 
     af_template - Equinox AF Template
 
@@ -110,6 +111,24 @@ af_get_version (char *ec00_version, char *common_version)
 static int
 extract_instance(char* raw_instance, AF_INSTANCE* instance)
 {
+#define GET_INSTANCE_STR(_BUFF)                 \
+{                                               \
+    p = _p + 1;                                 \
+    _p = strstr(p,"|");                         \
+    *_p='\0';                                   \
+    strcpy(_BUFF,p);                            \
+}
+#define GET_INSTANCE_VAL(_BUFF)                 \
+{                                               \
+    p = _p + 1;                                 \
+    _p = strstr(p,"|");                         \
+    *_p='\0';                                   \
+    strcpy(temp_buff,p);                        \
+    _BUFF = atoi(temp_buff);                    \
+}
+	
+	SFLOG_INFO("Extract Instance :");	
+		
 	char *p, *_p;
 	char temp_buff[20];
 	char *instance_buff;
@@ -120,58 +139,196 @@ extract_instance(char* raw_instance, AF_INSTANCE* instance)
 	p = instance_buff;
 	_p = strstr(instance_buff,"|");
 	if(_p==NULL) {
-		memset(instance->incoming_addr, 0, sizeof(instance->incoming_addr));
-		instance->timestamp_sec = 0;
-		instance->timestamp_usec = 0;
-		
 		instance->command = MY_AF_SEND_NOTHING;
 	} else {
 		//first element
 		p = instance_buff;
 		*_p='\0';
 		strcpy(instance->incoming_addr,p);
-		//next element
-		p = _p + 1;
-		_p = strstr(p,"|");
-		*_p='\0';
-		strcpy(temp_buff,p);
-		instance->timestamp_sec = atoi(temp_buff);
-		//next element
-		p = _p + 1;
-		_p = strstr(p,"|");
-		*_p='\0';
-		strcpy(temp_buff,p);
-		instance->timestamp_usec = atoi(temp_buff);
+		
+		if (strstr(p, ".ES04") == NULL) 
+		{
+			strcpy(instance->incoming_addr,p);
+		}
+		
+		GET_INSTANCE_STR(instance->invoke);
+		GET_INSTANCE_VAL(instance->number_from_client);
+		GET_INSTANCE_STR(instance->math_symbol);
+		GET_INSTANCE_VAL(instance->number_from_dbproxy);
 	}
 	free(instance_buff);
-	return 0;
+	
+	SFLOG_INFO("  Instance Data : %s|%s|%d|%s|%d\n", instance->incoming_addr, instance->invoke, instance->number_from_client, instance->math_symbol, instance->number_from_dbproxy);
+	return 0;	
 }
 
 static int
 compose_instance(AF_INSTANCE* instance, char* raw_instance)
 {
-	char temp_buff[20];
+	SFLOG_INFO("Compose Instance :");	
+		
+	char temp_buff[50];
 	strcpy(raw_instance,"");
-	strcat(raw_instance,instance->incoming_addr);strcat(raw_instance,"|");
-	sprintf(temp_buff, "%d", instance->timestamp_sec);
-	strcat(raw_instance,temp_buff);strcat(raw_instance,"|");
-	sprintf(temp_buff, "%d", instance->timestamp_usec);
-	strcat(raw_instance,temp_buff);strcat(raw_instance,"|");
+	
+	strcat(raw_instance,instance->incoming_addr);
+	strcat(raw_instance,"|");
+	
+	strcat(raw_instance,instance->invoke);
+	strcat(raw_instance,"|");
 
+	sprintf(temp_buff, "%d", instance->number_from_client);
+	strcat(raw_instance,temp_buff);
+	strcat(raw_instance,"|");
+	
+	strcat(raw_instance,instance->math_symbol);
+	strcat(raw_instance,"|");
+	
+	sprintf(temp_buff, "%d", instance->number_from_dbproxy);
+	strcat(raw_instance,temp_buff);
+	strcat(raw_instance,"|");
+	
 	return 0;
 }
 
 static int
 extract_raw_data(AF_INSTANCE* instance, EQX_MSG* emsg, int* eventType, char *err)
 {
-	*eventType = MY_AF_EVENT_ANY;
+    SFLOG_INFO("Extract RawData ...");	
+
+	int ret = atoi(emsg->raw[0].ret);
+    if (ret == MY_AF_RET_ERROR)
+    {
+        *eventType = MY_AF_EVENT_ERROR;
+        return 0;
+    }
+    else if (ret == MY_AF_RET_REJECT)
+    {
+        *eventType = MY_AF_EVENT_REJECT;
+        return 0;
+    }
+    else if (ret == MY_AF_RET_ABORT)
+    {
+        *eventType = MY_AF_EVENT_ABORT;
+        return 0;
+    }
 	
+	strcpy(instance->invoke, emsg->raw[0].invoke);
+	
+	char *request_value;
+	request_value = emsg->raw[0].data;
+
+	SFLOG_INFO(" -------- MSG From %s", emsg->from);	
+	SFLOG_INFO(" --------- MSG via %s", emsg->via);	
+	SFLOG_INFO(" ----- MSG session %s\n", emsg->session);	
+	
+	SFLOG_INFO(" -------- Orig %s", emsg->raw[0].orig);		
+	SFLOG_INFO(" -------- Name %s", emsg->raw[0].name);	
+	SFLOG_INFO(" -------- Type %s", emsg->raw[0].type);	
+	SFLOG_INFO(" ------- Ctype %s", emsg->raw[0].ctype);	
+	SFLOG_INFO(" ------ Invoke %s", emsg->raw[0].invoke);		
+	SFLOG_INFO(" -------- Data %s", emsg->raw[0].data);
+	SFLOG_INFO(" ---------- To %s", emsg->raw[0].to);		
+	
+	if (strstr(emsg->raw[0].orig, ".ES05.") != NULL) 
+	{	
+		char s[10];
+		char *p;
+		p=emsg->raw[0].data;
+		int data_value = 0;
+		
+		if(strlen(s)>1){
+			p++;
+			data_value = atoi(p);
+		}
+		
+		if (strstr(emsg->raw[0].orig, ".ES05.0.") != NULL) 
+		{
+			instance->number_from_client = data_value;
+			*eventType = MY_AF_EVENT_GOT_REQUEST_CLIENT;
+		}
+		else if (strstr(emsg->raw[0].orig, ".ES05.1.") != NULL) {
+			instance->number_from_dbproxy = data_value;		
+			*eventType = MY_AF_EVENT_GOT_REQUEST_DBPROXY;			
+		}	
+		
+		strcpy(instance->incoming_addr, emsg->raw[0].orig);
+	}
+	else if (strstr(emsg->raw[0].orig, ".ES04.") != NULL) 
+	{
+		strcpy(instance->math_symbol, request_value);		
+		
+		*eventType = MY_AF_EVENT_GOT_MATH_SERVER;
+	}
+	
+	SFLOG_INFO("INSTANCE: %s|%s|%d|%s|%d|", instance->incoming_addr, instance->invoke, instance->number_from_client, instance->math_symbol, instance->number_from_dbproxy);	
+	SFLOG_INFO("=============================================================");		
 	return 0;
 }
 
 static int
 construct_raw_data(AF_INSTANCE* instance, EQX_MSG* emsg)
 {
+	SFLOG_INFO("Construct RawData ...%d", instance->command);
+	if (instance->command == MY_AF_SEND_ANY)
+	{
+		SFLOG_INFO("Construct RawData -- Do MY_AF_SEND_ANY");
+		SFLOG_INFO("TO %s", emsg->raw[0].orig);	
+	
+		sprintf(emsg->raw[0].to, "%s", emsg->raw[0].orig);
+		sprintf(emsg->raw[0].udef[UDEF_ATTR_ECODE], "%d", 200);
+		sprintf(emsg->raw[0].type, "%s", "response");
+	}	
+	else if (instance->command == MY_AF_EVENT_GOT_REQUEST_CLIENT)
+	{
+		SFLOG_INFO("Construct RawData -- Do MY_AF_EVENT_GOT_REQUEST_CLIENT");		
+		sprintf(emsg->raw[0].to, "calre.ES04.0.0");
+		sprintf(emsg->raw[0].udef[UDEF_ATTR_URL], "/10.138.46.215:14010");
+		sprintf(emsg->raw[0].type, "%s", "request");
+		strcpy(emsg->raw[0].data,"");		
+	}
+	else if (instance->command == MY_AF_EVENT_GOT_MATH_SERVER)
+	{
+		SFLOG_INFO("Construct RawData -- Do MY_AF_EVENT_GOT_MATH_SERVER");
+		SFLOG_INFO("TO %s", instance->incoming_addr);		
+		
+		sprintf(emsg->raw[0].to, "%s", instance->incoming_addr);
+		sprintf(emsg->raw[0].udef[UDEF_ATTR_ECODE], "%d", 200);
+		sprintf(emsg->raw[0].type, "response");
+		sprintf(emsg->raw[0].data, "%s", instance->output);
+	}	
+	else 
+	{
+		SFLOG_INFO("Construct RawData -- Do NOTHING");	
+	}
+	
+	/*
+	switch (instance->command)
+	{
+		case MY_AF_EVENT_WAIT_REQUEST_CLIENT:
+			emsg->raw_entry = 1;
+			sprintf(emsg->raw[0].to, "%s", instance->incoming_addr);			
+			sprintf(emsg->raw[0].name, "HTTP");
+            sprintf(emsg->raw[0].ctype, "text/html");	
+			sprintf(emsg->raw[0].invoke, "%s", instance->invoke);			
+			
+			sprintf(emsg->raw[0].type, "request");
+			sprintf(emsg->raw[0].udef[UDEF_ATTR_URL], "http://10.138.46.215:12001/10.138.46.215:9080");		
+			break;
+			
+		case MY_AF_EVENT_WAIT_REQUEST_SERVER:
+			emsg->raw_entry = 1;
+			sprintf(emsg->raw[0].to, "%s", emsg->raw[0].orig);			
+			sprintf(emsg->raw[0].name, "HTTP");
+            sprintf(emsg->raw[0].ctype, "text/html");	
+			sprintf(emsg->raw[0].invoke, "%s", instance->invoke);
+            sprintf(emsg->raw[0].udef[UDEF_ATTR_ECODE], "200");			
+			sprintf(emsg->raw[0].type, "response");
+			break;
+		
+		default:		
+			break;
+	}
+	
 	if (instance->command == MY_AF_SEND_ANY)
 	{
 		sprintf(emsg->raw[0].to, "%s", emsg->raw[0].orig);
@@ -184,6 +341,7 @@ construct_raw_data(AF_INSTANCE* instance, EQX_MSG* emsg)
 		sprintf(emsg->raw[0].udef[UDEF_ATTR_ECODE], "%d", 200);
 		sprintf(emsg->raw[0].type, "%s", "response");
 	}
+	*/
 	return 0;
 }
 
@@ -194,14 +352,16 @@ construct_raw_data(AF_INSTANCE* instance, EQX_MSG* emsg)
 int
 af_action_process(EC_UTILS* utils, EQX_MSG* emsg, int data_entry, char* state, char* err)
 {
-	int r=0;
+	SFLOG_INFO("Do Action Process ...");
+	
+	int r = 0;
 	int af_state = atoi(state);
 	int af_next_state = MY_AF_STATE_IDLE;
 	int af_return_code = atoi(emsg->ret);
-	int messageEvent = 0;
+	int messageEvent = MY_AF_EVENT_ANY;
 	AF_INSTANCE *instance;
 	
-	SFLOG_DEBUG("Start AF Business Logic");
+	SFLOG_INFO("Start AF Business Logic ...");
 	/* (void) ec_alarm_raise (utils, "ALARMNAME", "", ALARM_SEVERITY_MAJOR, ALARM_CATEGORY_APPLICATION, ALARM_TYPE_NOMAL);
 	(void) ec_stat_increment (utils, "STATNAME");
 	(void) ec_log_write (utils, "LOGNAME", "Start AF Business Logic"); */
@@ -238,17 +398,20 @@ af_action_process(EC_UTILS* utils, EQX_MSG* emsg, int data_entry, char* state, c
 		sprintf(err,"raw instance collapsed");
 		return -1;
 	}
+	
+	SFLOG_INFO("Extract complete");
 
 	/*
 	 * extract message
 	 */
-	messageEvent = MY_AF_EVENT_UNKNOWN;
 	if(emsg->raw_entry>1)
 	{
 		sprintf(err,"not support multi-raw data");
 		return -1;
 	}
+	
 	r = extract_raw_data(instance, emsg, &messageEvent, err);
+		
 	if(r!=0)
 	{
 		sprintf(err,"cannot get message events");
@@ -266,12 +429,14 @@ af_action_process(EC_UTILS* utils, EQX_MSG* emsg, int data_entry, char* state, c
 				break;
 			case MY_AF_STATE_W_PROXY:
 				af_next_state = af_state_wait_proxy(messageEvent, utils, emsg, instance, err);
-				break;		
+				break;				
 			default:
 				sprintf(err,"wrong state found [%d]",af_state);
 				return -1;
 		}
-	} else { //MY_AF_RET_TIMEOUT
+	} 
+	else 
+	{ //MY_AF_RET_TIMEOUT
 		af_next_state = MY_AF_STATE_IDLE;
 	}
 	

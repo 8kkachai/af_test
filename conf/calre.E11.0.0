@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="tis-620" ?>
+<configuration>
+   <cold>
+      <HomeDirectory value="/opt/equinox" />
+      <sf group="calre" service="0" instance="0">
+         <Host host="localhost" port="21300" alias="E00_1" />
+      </sf>
+	  <e11db om-port="20001" size="8589934592" restore="exist" link_backup_file="latest_backup_E11" /> <!-- restore: all | exist (default) | notify -->
+      <!--<replication status-port="3868" data-port="3878" pair="localhost" site="local" pause-able="yes" connection="1" />-->
+      <!--pair=[destination host] -->
+      <!--site=[local] for start E11 on the same host-->
+   </cold>
+   <warm>
+      <SFLOG value="FATAL|ERROR|WARN|INFO" />
+	  <!-- SFLOGSplitInterval number of minute value : 5-1440 (1440 = 1 day) **value can modulo to 1440 only exp: 10,20,30,60,120 -->
+	  <SFLOGSplitInterval value="1440" />
+	  <!-- StatInterval value : 1,2,3,4,5,6,10,12,15,20,30,60 -->
+      <StatInterval value="10" />
+      <!-- StatAlignment for adjust number of second in minute value : 0-59 -->
+      <StatAlignment value="0" />
+      <!-- StatResetInterval number of minute value : 0-1440 (1440 = 1 day) -->
+      <StatResetInterval value="1440" />
+      <RestartDelay value="2" />
+      <MaxRetry value="1" />
+
+      <SFMessageTimeout value="60" />
+      <SFMaxClient value="1" />
+      <SFConnectTimeout value="10" />
+      <SFReadTimeout value="30" />
+      <SFWriteTimeout value="30" />
+      <SFACKTimeout value="60" />
+      <SFWatchdogInterval value="30" />
+      <SFMaxWriteLength value="0" />
+      <SFHighMessageCount value="10000" />
+      <SFLowMessageCount value="1000" />
+	  <!-- <AFService value="1"/> trigger mode, active start to ES00.service -->
+
+   </warm>
+</configuration>

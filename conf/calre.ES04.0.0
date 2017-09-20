@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="tis-620" ?>
+<configuration>
+    <cold>
+        <HomeDirectory value="/opt/equinox" />
+        <sf group="calre" service="0" instance="0">
+            <Host host="localhost" port="21300" />
+        </sf>
+
+        <!-- loadtype = none, roundrobin, leastutilized , nonedistribute -->
+        <!-- none : for distribute mode separate tunnel by filter --> 
+        <!-- nonedistribute : for every loadbalance node is same system --> 
+        <!-- ssl_mode=[SSLv2|SSLv3|SSLv23|TLSv1|TLSv1.1|TLSv1.2] -->
+        <!-- cert_file,key_file,rsa_key_file = [/path/to/.pem] -->
+        <!-- cipher_list=[ALL] -->
+        <http loadtype="nonedistribute" version="HTTP/1.1" uri="/" >
+			<LoadBalance host="10.138.46.215" port="12001" weight="8" />
+			<!--Ex.Define Resource control by filter to node-->
+            <!--LoadBalance host="localhost" port="12001" weight="10" >
+                <RCList value="/" />
+                <RCList value="*" />
+            </LoadBalance-->
+			<!--Ex.limit connection permanence-->
+            <!--LoadBalance host="localhost" port="21300" weight="5" permanence="no"-->
+			<!--Ex.limit connection/node-->
+			<!--LoadBalance host="localhost" port="21300" weight="5" permanence="no" limitcon="1"-->
+			<!--Ex.keep alive request-->
+			<!--LoadBalance host="localhost" port="21300" weight="5" permanence="no" pingmethod="TRACE" pingval="10"-->
+			<!--Ex.Ackless for SIP connection-->
+			<!--LoadBalance host="localhost" port="21300" weight="5" permanence="no" ackless="1"-->
+			
+            <Header name="Pragma" value="no-cache" />
+            <Header name="Accept" value="image/gif, image/x-xbitmap, image/jpeg, image/pjpeg, */*" />
+            <Header name="Content-Type" value="application/x-www-form-urlencoded"/>
+        </http>
+    </cold>
+    <warm>
+        <SFLOG value="FATAL|ERROR|WARN|INFO" />
+        <!-- SFLOGSplitInterval number of minute value : 5-1440 (1440 = 1 day) **value can modulo to 1440 only exp: 10,20,30,60,120 -->
+        <SFLOGSplitInterval value="1440" />
+        <!-- StatInterval value : 1,2,3,4,5,6,10,12,15,20,30,60 -->
+        <StatInterval value="10" />
+        <!-- StatAlignment for adjust number of second in minute value : 0-59 -->
+        <StatAlignment value="0" />
+        <!-- StatResetInterval number of minute value : 0-1440 (1440 = 1 day) -->
+        <StatResetInterval value="1440" />
+        <HousekeeperInterval value="10" />
+        <RestartDelay value="10" />
+        <MaxRetry value="1" />
+
+        <SFMessageTimeout value="10" />
+        <SFMaxClient value="2" />
+        <SFConnectTimeout value="10" />
+        <SFReadTimeout value="10" />
+        <SFWriteTimeout value="10" />
+        <SFACKTimeout value="20" />
+        <SFWatchdogInterval value="30" />
+        <SFMaxWriteLength value="8372223" />
+
+        <HttpMaxClient value="128" />
+        <HttpConnectTimeout value="10" />
+        <HttpWaitTimeout value="20" />
+        <HttpReadTimeout value="10" />
+        <HttpWriteTimeout value="10" />
+        <HttpMaxWriteLength value="0" />
+
+        <!--Wrap content by ERDHeader , ERDData : [yes:no]-->
+        <HttpHeader value="no" />
+		
+		<!--Allow duplicate header from App. [yes:no]-->
+		<HttpHeaderDuplicate value="no" />
+		<!--Encoding before request to App : [base64:no] (default = no) , encode base64 then HttpERDDataIncomingEncode [base64] and HttpHeader [yes] -->
+		<HttpERDDataIncomingEncode value="no" />
+        <!--Encoding(text/plain) before send to HTTP server : [encode:decode:no] (default = no)-->
+        <OutgoingEncoding value="no" />
+
+        <HighMessageCount value="2000" />
+        <LowMessageCount value="1000" />
+
+        <HttpMaxRetryConnectionError value="10" />
+        <HttpReconnectInterval value="10" />
+		
+		<!--Check send queue timeout value = [-1:disable,0:use equinoxmessage->timeout, more than 0(x): timeout in x second ]-->
+        <HttpMsgQueueTimeout value="-1" />
+
+        <!--Reject msg to e11 when queue timeout ocured --value ["yes":enable,"no":disable, default as "no"] -->
+        <HttpRejectQueueTimeout value="no" />
+    </warm>
+</configuration>
